@@ -84,28 +84,46 @@ public class UserService
         }
     }
 
-    public IEnumerable<string> GetUsers()
+public IEnumerable<string> GetUsers()
+{
+    List<string> users = new List<string>();
+
+    using (var connection = new NpgsqlConnection(_connectionString))
     {
-        List<string> users = new List<string>();
+        connection.Open();
 
-        using (var connection = new NpgsqlConnection(_connectionString))
+        using (var cmd = new NpgsqlCommand())
         {
-            connection.Open();
-
-            using (var cmd = new NpgsqlCommand())
+            cmd.Connection = connection;
+            cmd.CommandText = @"SELECT 
+                u.usename AS username,
+                r.rolcreatedb AS creation_time,
+                r.rolvaliduntil AS expiration_time,
+                CASE WHEN r.rolsuper THEN 'true' ELSE '' END AS superuser,
+                CASE WHEN r.rolcreaterole THEN 'true' ELSE '' END AS createrole,
+                CASE WHEN r.rolcreatedb THEN 'true' ELSE '' END AS createdb,
+                CASE WHEN r.rolcanlogin THEN 'true' ELSE '' END AS canlogin,
+                CASE WHEN r.rolreplication THEN 'true' ELSE '' END AS replication,
+                CASE WHEN r.rolbypassrls THEN 'true' ELSE '' END AS bypassrls,
+                CASE WHEN r.rolinherit THEN 'true' ELSE '' END AS inherit,
+                CASE WHEN r.rolconnlimit <> -1 THEN 'connection limit: ' || r.rolconnlimit ELSE '' END AS connlimit
+                FROM
+                    pg_catalog.pg_user u
+                JOIN
+                    pg_catalog.pg_roles r ON u.usename = r.rolname;";
+            using (var reader = cmd.ExecuteReader())
             {
-                cmd.Connection = connection;
-                cmd.CommandText = "SELECT usename FROM pg_catalog.pg_user";
-                using (var reader = cmd.ExecuteReader())
+                Console.WriteLine("Users: {0}", reader);
+                while (reader.Read())
                 {
-                    while (reader.Read())
-                    {
-                        users.Add(reader.GetString(0));
-                    }
+                    // Concatenate the values of CASE expressions and add them to the users list
+                    string user = $"{reader.GetString(0)} - Superuser: {reader.GetString(3)}, Create Role: {reader.GetString(4)}, Create DB: {reader.GetString(5)}, Can Login: {reader.GetString(6)}, Replication: {reader.GetString(7)}, Bypass RLS: {reader.GetString(8)}, Inherit: {reader.GetString(9)}, Conn Limit: {reader.GetString(10)}";
+                    users.Add(user);
                 }
             }
         }
-
-        return users;
     }
+
+    return users;
+}
 }

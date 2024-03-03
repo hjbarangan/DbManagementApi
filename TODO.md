@@ -1,7 +1,8 @@
 TODO
 
 (SERVICE)
-[] Throw an error if user or role already exists 
+[] Throw an error if user or role already exists
+[] Return a json format
 [] Add conditions 
 
 (DTOs)

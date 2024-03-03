@@ -14,4 +14,6 @@ Content-Type: application/json
 GET {{DbManagementApi_HostAddress}}/api/user/
 Accept: application/json
 
+DELETE {{DbManagementApi_HostAddress}}/api/user/{username}
+
 ###
