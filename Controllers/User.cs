@@ -1,9 +1,12 @@
 
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
 
 [ApiController]
 [Route("/api/[controller]")]
-[Produces("application/json")]
+
 
 public class UserController : ControllerBase
 {
@@ -18,7 +21,9 @@ public class UserController : ControllerBase
     public IActionResult CreateUser([FromBody] UserDto userDto)
     {
         _userService.CreateUser(userDto.Username, userDto.Password);
-        return Ok("User Created");
+
+        var response = new { message = "User Created" };
+        return Ok(JsonConvert.SerializeObject(response));
     }
 
     [HttpGet()]
@@ -27,6 +32,7 @@ public class UserController : ControllerBase
         try
         {
             var users = _userService.GetUsers();
+            var jsonUsers = JsonConvert.SerializeObject(users);
             return Ok(users);
         }
         catch (Exception ex)
@@ -42,7 +48,6 @@ public class UserController : ControllerBase
         _userService.DropUser(username);
         return Ok("User Dropped");
     }
-
 
 
 }

@@ -1,5 +1,9 @@
-using Npgsql;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Serialization;
 using System.Collections.Generic;
+using Npgsql;
+
 public class UserService
 {
     private readonly string _connectionString;
@@ -84,46 +88,72 @@ public class UserService
         }
     }
 
-public IEnumerable<string> GetUsers()
-{
-    List<string> users = new List<string>();
-
-    using (var connection = new NpgsqlConnection(_connectionString))
+    public string GetUsers()
     {
-        connection.Open();
+        List<User> users = new List<User>();
 
-        using (var cmd = new NpgsqlCommand())
+        using (var connection = new NpgsqlConnection(_connectionString))
         {
-            cmd.Connection = connection;
-            cmd.CommandText = @"SELECT 
-                u.usename AS username,
-                r.rolcreatedb AS creation_time,
-                r.rolvaliduntil AS expiration_time,
-                CASE WHEN r.rolsuper THEN 'true' ELSE '' END AS superuser,
-                CASE WHEN r.rolcreaterole THEN 'true' ELSE '' END AS createrole,
-                CASE WHEN r.rolcreatedb THEN 'true' ELSE '' END AS createdb,
-                CASE WHEN r.rolcanlogin THEN 'true' ELSE '' END AS canlogin,
-                CASE WHEN r.rolreplication THEN 'true' ELSE '' END AS replication,
-                CASE WHEN r.rolbypassrls THEN 'true' ELSE '' END AS bypassrls,
-                CASE WHEN r.rolinherit THEN 'true' ELSE '' END AS inherit,
-                CASE WHEN r.rolconnlimit <> -1 THEN 'connection limit: ' || r.rolconnlimit ELSE '' END AS connlimit
-                FROM
-                    pg_catalog.pg_user u
-                JOIN
-                    pg_catalog.pg_roles r ON u.usename = r.rolname;";
-            using (var reader = cmd.ExecuteReader())
+            connection.Open();
+
+            using (var cmd = new NpgsqlCommand())
             {
-                Console.WriteLine("Users: {0}", reader);
-                while (reader.Read())
+                cmd.Connection = connection;
+                cmd.CommandText = @"SELECT 
+                    u.usename AS username,
+                    r.rolcreatedb AS creation_time,
+                    r.rolvaliduntil AS expiration_time,
+                    CASE WHEN r.rolsuper THEN 'true' ELSE '' END AS superuser,
+                    CASE WHEN r.rolcreaterole THEN 'true' ELSE '' END AS createrole,
+                    CASE WHEN r.rolcreatedb THEN 'true' ELSE '' END AS createdb,
+                    CASE WHEN r.rolcanlogin THEN 'true' ELSE '' END AS canlogin,
+                    CASE WHEN r.rolreplication THEN 'true' ELSE '' END AS replication,
+                    CASE WHEN r.rolbypassrls THEN 'true' ELSE '' END AS bypassrls,
+                    CASE WHEN r.rolinherit THEN 'true' ELSE '' END AS inherit,
+                    CASE WHEN r.rolconnlimit <> -1 THEN 'connection limit: ' || r.rolconnlimit ELSE '' END AS connlimit
+                    FROM
+                        pg_catalog.pg_user u
+                    JOIN
+                        pg_catalog.pg_roles r ON u.usename = r.rolname;";
+                using (var reader = cmd.ExecuteReader())
                 {
-                    // Concatenate the values of CASE expressions and add them to the users list
-                    string user = $"{reader.GetString(0)} - Superuser: {reader.GetString(3)}, Create Role: {reader.GetString(4)}, Create DB: {reader.GetString(5)}, Can Login: {reader.GetString(6)}, Replication: {reader.GetString(7)}, Bypass RLS: {reader.GetString(8)}, Inherit: {reader.GetString(9)}, Conn Limit: {reader.GetString(10)}";
-                    users.Add(user);
+                    while (reader.Read())
+                    {
+                        User user = new User
+                        {
+                            Username = reader.GetString(0),
+                            Superuser = reader.GetString(3),
+                            Createrole = reader.GetString(4),
+                            Createdb = reader.GetString(5),
+                            Canlogin = reader.GetString(6),
+                            Replication = reader.GetString(7),
+                            Bypassrls = reader.GetString(8),
+                            Inherit = reader.GetString(9),
+                            Connlimit = reader.GetString(10)
+                        };
+                        users.Add(user);
+
+                    }
                 }
             }
         }
-    }
+        string json = JsonConvert.SerializeObject(users, Formatting.None);
 
-    return users;
+
+        Console.WriteLine(json);
+        return json;
+    }
 }
+
+public class User
+{
+    public required string Username { get; set; }
+    public string? Superuser { get; set; }
+    public string? Createrole { get; set; }
+    public string? Createdb { get; set; }
+    public string? Canlogin { get; set; }
+    public string? Replication { get; set; }
+    public string? Bypassrls { get; set; }
+    public string? Inherit { get; set; }
+    public string? Connlimit { get; set; }
 }
